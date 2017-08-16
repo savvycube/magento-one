@@ -1,0 +1,26 @@
+<?php
+$quote = Mage::getModel('checkout/cart')->getQuote();
+$quoteAlreadyTracked = Mage::getSingleton('core/session')
+    ->getData('wCube_track_' . $quote->getId());
+$_helper = $this->helper('googleanalytics');
+?>
+<?php if (!$quoteAlreadyTracked && $quote->getId() && !$this->helper('core/cookie')->isUserNotAllowSaveCookie()): ?>
+<?php
+Mage::getSingleton('core/session')->setData('wCube_track_' . $quote->getId(), true);
+?>
+    <?php if($_helper->isUseUniversalAnalytics()): ?>
+        <script type="text/javascript">
+        //<![CDATA[
+            (function(){ga('send', 'event', 'wCube', 'quote', <?php echo "'" . $quote->getId() .  "'"; ?>);})()
+
+        //]]>
+        </script>
+    <?php else: ?>
+        <script type="text/javascript">
+        //<![CDATA[
+            var _gaq = _gaq || [];
+            _gaq.push(['_trackEvent', 'wCube', 'quote', <?php echo "'" . $quote->getId() .  "'"; ?>]);
+        //]]>
+        </script>
+    <?php endif; ?>
+<?php endif; ?>

@@ -1,0 +1,5 @@
+app/code/community/SavvyCube/Connector app/code/community/SavvyCube/Connector
+app/design/frontend/base/default/layout/wCube app/design/frontend/base/default/layout/wCube
+app/design/frontend/base/default/template/wCube app/design/frontend/base/default/template/wCube
+app/etc/modules/SavvyCube_Connector.xml app/etc/modules/SavvyCube_Connector.xml
+lib/sc/connector lib/sc/connector

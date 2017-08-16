@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<!--
+/**
+* Magento
+*
+* NOTICE OF LICENSE
+*
+* This source file is subject to the Open Software License (OSL 3.0)
+* that is bundled with this package in the file LICENSE.txt.
+* It is also available through the world-wide-web at this URL:
+* http://opensource.org/licenses/osl-3.0.php
+* If you did not receive a copy of the license and are unable to
+* obtain it through the world-wide-web, please send an email
+* to license@savvycube.com so we can send you a copy immediately.
+*
+* @category   SavvyCube
+* @package    SavvyCube_Connector
+* @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+* @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+*/
+-->
+<config>
+    <modules>
+        <SavvyCube_Connector>
+            <version>2.0.0</version>
+        </SavvyCube_Connector>
+    </modules>
+    <global>
+        <models>
+            <wCube>
+                <class>SavvyCube_Connector_Model</class>
+                <resourceModel>wCube_resource</resourceModel>
+            </wCube>
+            <wCube_resource>
+                <class>SavvyCube_Connector_Model_Resource</class>
+                <entities>
+                    <nonce>
+                        <table>savvycube_nonce</table>
+                    </nonce>
+                    <session>
+                        <table>savvycube_session</table>
+                    </session>
+                </entities>
+            </wCube_resource>
+        </models>
+        <blocks>
+            <wCube>
+                <class>SavvyCube_Connector_Block</class>
+            </wCube>
+        </blocks>
+        <helpers>
+            <wCube>
+                <class>SavvyCube_Connector_Helper</class>
+            </wCube>
+        </helpers>
+        <resources>
+            <wCube_setup>
+                <setup>
+                    <module>SavvyCube_Connector</module>
+                    <class>Mage_Core_Model_Resource_Setup</class>
+                </setup>
+            </wCube_setup>
+        </resources>
+    </global>
+    <admin>
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <wCube before="Mage_Adminhtml">SavvyCube_Connector</wCube>
+                    </modules>
+                </args>
+            </adminhtml>
+        </routers>
+    </admin>
+    <frontend>
+        <layout>
+            <updates>
+                <wCube>
+                    <file>wCube/layout.xml</file>
+                </wCube>
+            </updates>
+        </layout>
+        <routers>
+            <savvycube>
+                <use>standard</use>
+                <args>
+                    <module>SavvyCube_Connector</module>
+                    <frontName>savvycube</frontName>
+                </args>
+            </savvycube>
+        </routers>
+    </frontend>
+    <default>
+        <w_cube>
+            <settings>
+                 <priv backend_model="adminhtml/system_config_backend_encrypted" />
+                 <savvy_url><![CDATA[https://appbeta.savvycube.com/]]></savvy_url>
+            </settings>
+        </w_cube>
+    </default>
+</config>
