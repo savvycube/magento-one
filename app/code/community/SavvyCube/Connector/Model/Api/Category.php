@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,20 +14,21 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_Api_Abstract
 {
 
-    private $categories;
+    protected $_categories;
 
     public function getMethod()
     {
         $result = array();
-        $count = (int)$this->request['count'];
-        $offset = (int)$this->request['offset'];
-        $storeId = (int)$this->request['store'];
+        $count = (int)$this->_request['count'];
+        $offset = (int)$this->_request['offset'];
+        $storeId = (int)$this->_request['store'];
         $store = Mage::app()->getStore($storeId);
         $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')->startEnvironmentEmulation($store->getId());
 
@@ -36,24 +36,25 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
             ->getCollection()
             ->addAttributeToSelect('created_at')
             ->addAttributeToSelect('updated_at');
-        if (isset($this->request['from'])) {
+        if (isset($this->_request['from'])) {
             $categoryCollection->getSelect()
                 ->where(
                     "updated_at >= ?",
-                    $this->request['from']
+                    $this->_request['from']
                 );
         }
-        if (isset($this->request['to'])) {
+
+        if (isset($this->_request['to'])) {
             $categoryCollection->getSelect()
                 ->where(
                     "updated_at <= ?",
-                    $this->request['to']
+                    $this->_request['to']
                 );
         }
 
         $start = microtime(true);
         $categories = $categoryCollection->getItems();
-        $this->queryTime += microtime(true) - $start;
+        $this->_queryTime += microtime(true) - $start;
 
         foreach ($categories as $id => $category) {
             $result[$id] = $this->processCategory(
@@ -61,14 +62,15 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
                 $store
             );
         }
+
         Mage::getSingleton('core/app_emulation')->stopEnvironmentEmulation($initialEnvironmentInfo);
 
-        $this->count = count($result);
-        $this->data = $result;
+        $this->_count = count($result);
+        $this->_data = $result;
         return true;
     }
 
-    private function processCategory($category, $store)
+    protected function processCategory($category, $store)
     {
         $result['entity_id'] = $category->getEntityId();
         $result['store_id'] = $store->getId();
@@ -78,10 +80,10 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
         return $result;
     }
 
-    private function getFullCategoryPath($catId, $store)
+    protected function getFullCategoryPath($catId, $store)
     {
         $result = array();
-        if (!isset($this->categories[$store->getId()])) {
+        if (!isset($this->_categories[$store->getId()])) {
              $collection = Mage::getModel('catalog/category')->getCollection()
                 ->setStoreId($store->getId())
                 ->addAttributeToSelect('name');
@@ -93,9 +95,11 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
                  $orFilter[] = array('attribute' => 'parent_id', 'eq' => 0);
                  $collection->addAttributeToFilter($orFilter);
              }
-             $this->categories[$store->getId()] = $collection->getItems();
+
+             $this->_categories[$store->getId()] = $collection->getItems();
         }
-        $categories = $this->categories[$store->getId()];
+
+        $categories = $this->_categories[$store->getId()];
         if (isset($categories[$catId])) {
             foreach ($categories[$catId]->getPathIds() as $id) {
                 if (isset($categories[$id])) {
@@ -105,6 +109,7 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
                 }
             }
         }
+
         if (isset($categories[$store->getRootCategoryId()])) {
             $rootCategory = $categories[$store->getRootCategoryId()];
             foreach ($rootCategory->getPathIds() as $id) {
@@ -113,6 +118,7 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
                 } else {
                     $prefix = 'Unknown';
                 }
+
                 if ($result[0] == $prefix) {
                     array_shift($result);
                 } else {
@@ -127,7 +133,7 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
     public function init($params)
     {
         parent::init($params);
-        $this->request['store'] = array_key_exists('store', $params) ? $params['store'] : 0;
+        $this->_request['store'] = array_key_exists('store', $params) ? $params['store'] : 0;
         return $this;
     }
 

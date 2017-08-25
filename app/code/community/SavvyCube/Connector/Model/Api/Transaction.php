@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,14 +14,15 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Transaction extends SavvyCube_Connector_Model_Api_Abstract
 {
-    protected $mainTable = 'sales_payment_transaction';
+    protected $_mainTable = 'sales_payment_transaction';
 
-    protected $order = 'payment_table.entity_id';
+    protected $_order = 'payment_table.entity_id';
 
     /**
      * Render response
@@ -32,7 +32,7 @@ class SavvyCube_Connector_Model_Api_Transaction extends SavvyCube_Connector_Mode
     public function getMethod()
     {
         $sql = $this->getHelper()->getDbRead()->select()
-            ->from(array('main_table' => $this->getHelper()->getTableName($this->mainTable)))
+            ->from(array('main_table' => $this->getHelper()->getTableName($this->_mainTable)))
             ->joinLeft(
                 array('payment_table' => $this->getHelper()->getTableName('sales_flat_order_payment')),
                 "main_table.payment_id = payment_table.entity_id"
@@ -40,7 +40,7 @@ class SavvyCube_Connector_Model_Api_Transaction extends SavvyCube_Connector_Mode
             ->reset(Varien_Db_Select::COLUMNS)
             ->columns($this->columnsListForGet());
 
-        $this->data = $this->getResult($sql, '`main_table`.created_at');
+        $this->_data = $this->getResult($sql, '`main_table`.created_at');
         return true;
     }
 
@@ -74,7 +74,7 @@ class SavvyCube_Connector_Model_Api_Transaction extends SavvyCube_Connector_Mode
                     'is_closed',
                     'created_at'
                 ),
-                $this->mainTable,
+                $this->_mainTable,
                 'main_table'
             )
         );

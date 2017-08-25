@@ -14,14 +14,16 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-class SavvyCube_Connector_Model_Api_Quoteaddress extends SavvyCube_Connector_Model_Api_Abstract {
+class SavvyCube_Connector_Model_Api_Quoteaddress extends SavvyCube_Connector_Model_Api_Abstract
+{
 
-    protected $mainTable = 'sales_flat_quote_address';
+    protected $_mainTable = 'sales_flat_quote_address';
 
-    protected $order = 'main_table.address_id';
+    protected $_order = 'main_table.address_id';
 
     /**
      * Return columns list for getMethod select
@@ -65,7 +67,7 @@ class SavvyCube_Connector_Model_Api_Quoteaddress extends SavvyCube_Connector_Mod
                 'shipping_method',
                 'suffix'
             ),
-            $this->mainTable,
+            $this->_mainTable,
             'main_table',
             array(
                 'base_discount_amount' => 'discount_amount',

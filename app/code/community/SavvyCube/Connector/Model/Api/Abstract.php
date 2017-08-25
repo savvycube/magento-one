@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,24 +14,25 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 abstract class SavvyCube_Connector_Model_Api_Abstract
 {
-    protected $request;
+    protected $_request;
 
-    protected $queryTime = 0;
+    protected $_queryTime = 0;
 
-    protected $count = 0;
+    protected $_count = 0;
 
-    protected $data = null;
+    protected $_data = null;
 
-    protected $mainTable = '';
+    protected $_mainTable = '';
 
-    protected $parentEntity = array();
+    protected $_parentEntity = array();
 
-    protected $order = 'main_table.entity_id';
+    protected $_order = 'main_table.entity_id';
 
     public $error = null;
 
@@ -43,20 +43,20 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
      */
     public function getMethod()
     {
-        if (!empty($this->parentEntity)) {
-            $this->data = $this->getResult(
+        if (!empty($this->_parentEntity)) {
+            $this->_data = $this->getResult(
                 $this->generateQuery()
                     ->joinLeft(
-                        array('parent_table' => $this->parentEntity['table']),
-                        "parent_table.entity_id = main_table.{$this->parentEntity['parent_fk']}"
+                        array('parent_table' => $this->_parentEntity['table']),
+                        "parent_table.entity_id = main_table.{$this->_parentEntity['parent_fk']}"
                     )
                     ->reset(Varien_Db_Select::COLUMNS)
                     ->columns($this->columnsListForGet()),
-                    'parent_table.updated_at'
+                'parent_table.updated_at'
             );
             return true;
         } else {
-            $this->data = $this->getResult(
+            $this->_data = $this->getResult(
                 $this->generateQuery()->columns($this->columnsListForGet()),
                 '`main_table`.updated_at'
             );
@@ -67,8 +67,8 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
     public function generateQuery()
     {
         return $this->getHelper()->getDbRead()->select()
-            ->from(array('main_table' => $this->getHelper()->getTableName($this->mainTable)))
-            ->order($this->order)
+            ->from(array('main_table' => $this->getHelper()->getTableName($this->_mainTable)))
+            ->order($this->_order)
             ->reset(Varien_Db_Select::COLUMNS);
     }
 
@@ -80,49 +80,46 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
     {
         $bind = array();
 
-        if (isset($this->request['from'])) {
+        if (isset($this->_request['from'])) {
             $query->where("{$dateColumn} >= :fromDate");
-            $bind[":fromDate"] = $this->request['from'];
+            $bind[":fromDate"] = $this->_request['from'];
         }
-        if (isset($this->request['to'])) {
+
+        if (isset($this->_request['to'])) {
             $query->where("{$dateColumn} <= :toDate");
-            $bind[":toDate"] = $this->request['to'];
+            $bind[":toDate"] = $this->_request['to'];
         }
 
         $query->bind(array_merge($query->getBind(), $bind));
     }
 
     /**
-     * init model and set $request array
+     * init model and set $_request array
      *
-     * @param array $request
+     * @param array $params
      *
      * @return $this
      */
     public function init($params)
     {
-        $this->request = array();
-        $this->request['offset'] = array_key_exists('offset', $params) ? $params['offset'] : 0;
-        $this->request['count'] = array_key_exists('count', $params) ? $params['count'] : 100;
-        $this->request['from'] = array_key_exists('from', $params) ? urldecode($params['from']) : null;
-        $this->request['to'] = array_key_exists('to', $params) ? urldecode($params['to']) : null;
+        $this->_request = array();
+        $this->_request['offset'] = array_key_exists('offset', $params) ? $params['offset'] : 0;
+        $this->_request['count'] = array_key_exists('count', $params) ? $params['count'] : 100;
+        $this->_request['from'] = array_key_exists('from', $params) ? urldecode($params['from']) : null;
+        $this->_request['to'] = array_key_exists('to', $params) ? urldecode($params['to']) : null;
         return $this;
     }
 
     public function formatResponse($key)
     {
-        Mage::app()->getResponse()->setHeader('sc-version',
-            $this->getHelper()->getCurrentModuleVersion());
-        Mage::app()->getResponse()->setHeader('sc-query-time', $this->queryTime);
-        Mage::app()->getResponse()->setHeader('sc-report-count', $this->count);
+        Mage::app()->getResponse()->setHeader(
+            'sc-version',
+            $this->getHelper()->getCurrentModuleVersion()
+        );
+        Mage::app()->getResponse()->setHeader('sc-query-time', $this->_queryTime);
+        Mage::app()->getResponse()->setHeader('sc-report-count', $this->_count);
         $options = 0;
-        #if (defined('JSON_NUMERIC_CHECK')) {
-        #    $options |= JSON_NUMERIC_CHECK;
-        #}
-        #if (defined('JSON_PRETTY_PRINT')) {
-        #    $options |= JSON_PRETTY_PRINT;
-        #}
-        $data = json_encode($this->data, $options);
+        $data = json_encode($this->_data, $options);
         list($iv, $encryptedData) = $this->getAuthHelper()->encrypt($key, $data);
         $signature = $this->getAuthHelper()->getRsa()->sign($encryptedData);
         Mage::app()->getResponse()->setHeader('Sc-Sig', base64_encode($signature));
@@ -135,11 +132,12 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
         if ($dateColumn) {
             $this->applyDateLimit($query, $dateColumn);
         }
+
         $this->renderParameters($query);
         $start = microtime(true);
         $report = $this->getHelper()->getDbRead()->fetchAll($query, $query->getBind());
-        $this->count = count($report);
-        $this->queryTime += microtime(true) - $start;
+        $this->_count = count($report);
+        $this->_queryTime += microtime(true) - $start;
         return $report;
     }
 
@@ -150,8 +148,8 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
      */
     protected function renderParameters($sql)
     {
-        if (isset($this->request['count']) && isset($this->request['offset'])) {
-            $sql->limit($this->request['count'], $this->request['offset']);
+        if (isset($this->_request['count']) && isset($this->_request['offset'])) {
+            $sql->limit($this->_request['count'], $this->_request['offset']);
         }
     }
 

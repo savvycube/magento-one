@@ -14,23 +14,19 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
 {
-
-    const NONCE_TTL = 900; # 15 min
-
     const TIMESTAMP_GAP = 600; # 10 min
 
-    const SESSION_TTL = 600; # 10 min
-
-    protected $_sc_rsa = null;
+    protected $_scRsa = null;
 
     protected $_rsa = null;
 
-    protected $_c_rsa = null;
+    protected $_cRsa = null;
 
     public function getActivationUrl()
     {
@@ -57,26 +53,29 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
         $keys = $this->getRsa()->createKey(2048);
         $this->setCandidatePublicKey($keys['publickey']);
         $this->setCandidatePrivateKey($keys['privatekey']);
-        $this->_c_rsa = null;
+        $this->_cRsa = null;
     }
 
     public function candidateSignature($session)
     {
+        $currentTs = (int)Mage::getSingleton('core/date')->gmtTimestamp();
         if ($session == Mage::getStoreConfig('w_cube/settings/candidate_ts', 0)
-            && time() - Mage::getStoreConfig('w_cube/settings/candidate_ts', 0) < 120
+            && $currentTs - Mage::getStoreConfig('w_cube/settings/candidate_ts', 0) < 120
         ) {
             $rsa = $this->getCandidateRsa();
             $iv = crypt_random_string(10);
             return array(base64_encode($iv),
                 base64_encode($rsa->sign($iv)));
         }
+
         return False;
     }
 
     public function promoteCandidateKeys($session)
     {
+        $currentTs = (int)Mage::getSingleton('core/date')->gmtTimestamp();
         if ($session == Mage::getStoreConfig('w_cube/settings/candidate_ts', 0)
-            && time() - Mage::getStoreConfig('w_cube/settings/candidate_ts', 0) < 120
+            && $currentTs - Mage::getStoreConfig('w_cube/settings/candidate_ts', 0) < 120
         ) {
             $this->setPublicKey($this->getCandidatePublicKey());
             $this->setPrivateKey($this->getCandidatePrivateKey());
@@ -84,9 +83,10 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
             $this->setCandidatePrivateKey('');
             Mage::getConfig()->saveConfig('w_cube/settings/candidate_ts', 0, 'default', 0);
             $this->_rsa = null;
-            $this->_c_rsa = null;
+            $this->_cRsa = null;
             return True;
         }
+
         return False;
     }
 
@@ -103,14 +103,16 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
     public function getCandidatePrivateKey()
     {
         return Mage::helper('core')->decrypt(
-            Mage::getStoreConfig('w_cube/settings/candidate_priv', 0));
+            Mage::getStoreConfig('w_cube/settings/candidate_priv', 0)
+        );
     }
 
     public function setCandidatePrivateKey($val)
     {
+        $currentTs = (int)Mage::getSingleton('core/date')->gmtTimestamp();
         $val = Mage::helper('core')->encrypt($val);
         Mage::getConfig()->saveConfig('w_cube/settings/candidate_priv', $val, 'default', 0);
-        Mage::getConfig()->saveConfig('w_cube/settings/candidate_ts', time(), 'default', 0);
+        Mage::getConfig()->saveConfig('w_cube/settings/candidate_ts', $currentTs, 'default', 0);
     }
 
 
@@ -155,30 +157,26 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
 
     public function getScRsa()
     {
-        if (!isset($this->_sc_rsa)) {
+        if (!isset($this->_scRsa)) {
             $this->registerAutoloader();
-            $this->_sc_rsa = new Crypt_RSA();
-            $this->_sc_rsa->loadKey($this->getToken());
-            #$this->_sc_rsa->setHash('sha256');
-            $this->_sc_rsa->setSaltLength(128);
-            #$this->_sc_rsa->setMGFHash('sha256');
+            $this->_scRsa = new Crypt_RSA();
+            $this->_scRsa->loadKey($this->getToken());
+            $this->_scRsa->setSaltLength(128);
         }
 
-        return $this->_sc_rsa;
+        return $this->_scRsa;
     }
 
     public function getCandidateRsa()
     {
-        if (!isset($this->_c_rsa)) {
+        if (!isset($this->_cRsa)) {
             $this->registerAutoloader();
-            $this->_c_rsa = new Crypt_RSA();
-            $this->_c_rsa->loadKey($this->getCandidatePrivateKey());
-            #$this->_c_rsa->setHash('sha256');
-            $this->_c_rsa->setSaltLength(128);
-            #$this->_c_rsa->setMGFHash('sha256');
+            $this->_cRsa = new Crypt_RSA();
+            $this->_cRsa->loadKey($this->getCandidatePrivateKey());
+            $this->_cRsa->setSaltLength(128);
         }
 
-        return $this->_c_rsa;
+        return $this->_cRsa;
     }
 
     public function getRsa()
@@ -187,9 +185,7 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
             $this->registerAutoloader();
             $this->_rsa = new Crypt_RSA();
             $this->_rsa->loadKey($this->getPrivateKey());
-            #$this->_rsa->setHash('sha256');
             $this->_rsa->setSaltLength(128);
-            #$this->_rsa->setMGFHash('sha256');
         }
 
         return $this->_rsa;
@@ -205,9 +201,9 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
         return array($iv, base64_encode($cipher->encrypt($data)));
     }
 
-    public function verifySignature($base_str, $sig)
+    public function verifySignature($baseStr, $sig)
     {
-        return $this->getScRsa()->verify($base_str, base64_decode($sig));
+        return $this->getScRsa()->verify($baseStr, base64_decode($sig));
     }
 
     public function auth($request)
@@ -215,87 +211,41 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
         $baseUrl = Mage::getStoreConfig('w_cube/settings/base_url', 0);
         $method = strtoupper($request->getMethod());
         $url = strtolower(rtrim($baseUrl, '/') . $request->getOriginalPathInfo());
-        $params_base = array();
+        $paramsBase = array();
         $params = $request->getParams();
         ksort($params, SORT_STRING);
         foreach ($params as $key=>$value) {
-            $params_base[] = $key . "=" . $value;
+            $paramsBase[] = $key . "=" . $value;
         }
-        $params_base = implode('&', $params_base);
+
+        $paramsBase = implode('&', $paramsBase);
         $nonce = $request->getHeader('SC-NONCE');
         $timestamp = $request->getHeader('SC-TIMESTAMP');
         $sig = $request->getHeader('SC-AUTHORIZATION');
         if ($nonce && $timestamp && $sig) {
-            $base_str = implode('&', array($method, $url, $params_base, $nonce, $timestamp));
+            $baseStr = implode('&', array($method, $url, $paramsBase, $nonce, $timestamp));
             return $this->checkTimestamp($timestamp)
-                && $this->checkNonce($nonce)
-                && $this->verifySignature($base_str, $sig);
+                && $this->getResource()->checkNonce($nonce)
+                && $this->verifySignature($baseStr, $sig);
         }
+
         return False;
+    }
+
+    public function getResource()
+    {
+        return Mage::getResourceModel('wCube/main');
     }
 
     public function checkTimestamp($timestamp)
     {
-        return abs(time() - (int)$timestamp) < self::TIMESTAMP_GAP;
-    }
-
-    public function checkNonce($nonce)
-    {
-        $nonce = (int)$nonce;
-        $resource = Mage::getSingleton('core/resource');
-        $nonceTable = $resource->getTableName('wCube/nonce');
-        $select = $resource->getConnection('core_read')->select();
-        $select->from($nonceTable, 'nonce')
-            ->where('nonce = ?', $nonce)
-            ->where('UNIX_TIMESTAMP() - UNIX_TIMESTAMP(created_at) < ?', self::NONCE_TTL);
-        $duplicate = $resource->getConnection('core_read')->fetchOne($select);
-        if (!$duplicate) {
-            $resource->getConnection('core_write')
-                ->insert($nonceTable, array('nonce' => $nonce));
-            return true;
-        }
-        return false;
-    }
-
-    public function cleanNonce()
-    {
-        $resource = Mage::getSingleton('core/resource');
-        $nonceTable = $resource->getTableName('wCube/nonce');
-        $resource->getConnection('core_write')
-            ->delete($nonceTable,
-                array('UNIX_TIMESTAMP() - UNIX_TIMESTAMP(created_at) > ?' => self::NONCE_TTL)
-            );
-    }
-
-    public function cleanSession()
-    {
-        $resource = Mage::getSingleton('core/resource');
-        $sessionTable = $resource->getTableName('wCube/session');
-        $resource->getConnection('core_write')
-            ->delete($sessionTable,
-                array('UNIX_TIMESTAMP() - UNIX_TIMESTAMP(created_at) > ?' => self::SESSION_TTL)
-            );
-    }
-
-    public function createSession($key)
-    {
-        $session = uniqid('session_');
-        $resource = Mage::getSingleton('core/resource');
-        $sessionTable = $resource->getTableName('wCube/session');
-        $resource->getConnection('core_write')
-            ->insert($sessionTable, array('session' => $session, 'key' => $key));
-        return $session;
+        $currentTs = (int)Mage::getSingleton('core/date')->gmtTimestamp();
+        return abs($currentTs - (int)$timestamp) < self::TIMESTAMP_GAP;
     }
 
     public function getKeyBySession($session)
     {
-        $resource = Mage::getSingleton('core/resource');
-        $sessionTable = $resource->getTableName('wCube/session');
-        $select = $resource->getConnection('core_read')->select();
-        $select->from($sessionTable, 'key')
-            ->where('session = ?', $session)
-            ->where('UNIX_TIMESTAMP() - UNIX_TIMESTAMP(created_at) < ?', self::SESSION_TTL);
-        $key = $resource->getConnection('core_read')->fetchOne($select);
+        $key = $this->getResource()->getKeyBySession($session);
         if ($key)
             return $this->cleanKey($key);
         return False;

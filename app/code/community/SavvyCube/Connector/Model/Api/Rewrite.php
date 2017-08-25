@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,14 +14,15 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Rewrite extends SavvyCube_Connector_Model_Api_Abstract
 {
-    protected $mainTable = 'core_url_rewrite';
+    protected $_mainTable = 'core_url_rewrite';
 
-    protected $order = 'main_table.url_rewrite_id';
+    protected $_order = 'main_table.url_rewrite_id';
 
     /**
      * Render response
@@ -31,10 +31,10 @@ class SavvyCube_Connector_Model_Api_Rewrite extends SavvyCube_Connector_Model_Ap
      */
     public function getMethod()
     {
-        $this->data = $this->getResult(
-                $this->generateQuery()->columns($this->columnsListForGet()),
-                '`main_table`.url_rewrite_id'
-            );
+        $this->_data = $this->getResult(
+            $this->generateQuery()->columns($this->columnsListForGet()),
+            '`main_table`.url_rewrite_id'
+        );
 
         return true;
     }
@@ -55,7 +55,7 @@ class SavvyCube_Connector_Model_Api_Rewrite extends SavvyCube_Connector_Model_Ap
                 'target_path',
                 'product_id'
             ),
-            $this->mainTable,
+            $this->_mainTable,
             'main_table'
         );
     }

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,16 +14,17 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Helper_Data extends Mage_Core_Helper_Abstract
 {
-    private $dbRead;
+    protected $_dbRead;
 
-    private $resource;
+    protected $_resource;
 
-    private $tableName;
+    protected $_tableName;
 
     /**
      * return module log name
@@ -72,10 +72,11 @@ class SavvyCube_Connector_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getDbRead()
     {
-        if (!$this->dbRead) {
-            $this->dbRead = $this->getResource()->getConnection('core_read');
+        if (!$this->_dbRead) {
+            $this->_dbRead = $this->getResource()->getConnection('core_read');
         }
-        return $this->dbRead;
+
+        return $this->_dbRead;
     }
 
     /**
@@ -85,10 +86,11 @@ class SavvyCube_Connector_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getResource()
     {
-        if (!$this->resource) {
-            $this->resource = Mage::getSingleton('core/resource');
+        if (!$this->_resource) {
+            $this->_resource = Mage::getSingleton('core/resource');
         }
-        return $this->resource;
+
+        return $this->_resource;
     }
 
     /**
@@ -100,10 +102,11 @@ class SavvyCube_Connector_Helper_Data extends Mage_Core_Helper_Abstract
      */
     public function getTableName($name)
     {
-        if (!isset($this->tableName[$name])) {
-            $this->tableName[$name] = $this->getResource()->getTableName($name);
+        if (!isset($this->_tableName[$name])) {
+            $this->_tableName[$name] = $this->getResource()->getTableName($name);
         }
-        return $this->tableName[$name];
+
+        return $this->_tableName[$name];
     }
 
     public function getFullCategoryPath($categoryId)

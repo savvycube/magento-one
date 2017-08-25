@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,12 +14,13 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Quote extends SavvyCube_Connector_Model_Api_Abstract
 {
-    protected $mainTable = 'sales_flat_quote';
+    protected $_mainTable = 'sales_flat_quote';
 
     /**
      * Render response
@@ -29,7 +29,7 @@ class SavvyCube_Connector_Model_Api_Quote extends SavvyCube_Connector_Model_Api_
      */
     public function getMethod()
     {
-        $this->data = $this->getResult(
+        $this->_data = $this->getResult(
             $this->generateQuery()
                 ->join(
                     array('with_items' => $this->generateSubQuery()),
@@ -37,7 +37,7 @@ class SavvyCube_Connector_Model_Api_Quote extends SavvyCube_Connector_Model_Api_
                 )
                 ->reset(Varien_Db_Select::COLUMNS)
                 ->columns($this->columnsListForGet()),
-                'main_table.updated_at'
+            'main_table.updated_at'
         );
         return true;
     }
@@ -61,7 +61,7 @@ class SavvyCube_Connector_Model_Api_Quote extends SavvyCube_Connector_Model_Api_
     public function columnsListForGet()
     {
         return $this->prepareColumns(
-                array(
+            array(
                     'base_subtotal',
                     'base_grand_total',
                     'base_currency_code',
@@ -93,12 +93,12 @@ class SavvyCube_Connector_Model_Api_Quote extends SavvyCube_Connector_Model_Api_
                     'updated_at',
                     'created_at'
                 ),
-                $this->mainTable,
-                'main_table',
-                array(
+            $this->_mainTable,
+            'main_table',
+            array(
                     'base_subtotal' => 'subtotal',
                     'base_grand_total' => 'grand_total'
                 )
-            );
+        );
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,13 +14,14 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Customer extends SavvyCube_Connector_Model_Api_Abstract
 {
 
-    private $genderText;
+    protected $_genderText;
 
 
     public function getMethod()
@@ -30,8 +30,8 @@ class SavvyCube_Connector_Model_Api_Customer extends SavvyCube_Connector_Model_A
         $customerCollection = Mage::getModel('customer/customer')
             ->getCollection();
 
-        $count = (int)$this->request['count'];
-        $offset = (int)$this->request['offset'];
+        $count = (int)$this->_request['count'];
+        $offset = (int)$this->_request['offset'];
 
         $customerCollection->removeAttributeToSelect()
                 ->addAttributeToSelect('entity_id')
@@ -39,41 +39,46 @@ class SavvyCube_Connector_Model_Api_Customer extends SavvyCube_Connector_Model_A
                 ->addAttributeToSelect('gender')
                 ->addAttributeToSelect('updated_at')
                 ->addAttributeToSelect('created_at')
-                ->joinTable(array('group' => 'customer/customer_group'),
+                ->joinTable(
+                    array('group' => 'customer/customer_group'),
                     'customer_group_id=group_id',
                     array('customer_group' => 'customer_group_code'),
                     null,
-                    'left');
+                    'left'
+                );
 
         $customerCollection->getSelect()->limit($count, $offset);
 
         $dateColumn = 'updated_at';
 
-        if (isset($this->request['from'])) {
+        if (isset($this->_request['from'])) {
             $customerCollection->addAttributeToFilter(
                 $dateColumn,
-                array('gteq' => $this->request['from']));
+                array('gteq' => $this->_request['from'])
+            );
         }
-        if (isset($this->request['to'])) {
+
+        if (isset($this->_request['to'])) {
             $customerCollection->addAttributeToFilter(
                 $dateColumn,
-                array('lt' => $this->request['to']));
+                array('lt' => $this->_request['to'])
+            );
         }
 
         $start = microtime(true);
         $customers = $customerCollection->getItems();
-        $this->queryTime += microtime(true) - $start;
+        $this->_queryTime += microtime(true) - $start;
 
         foreach ($customers as $customerId => $customer) {
             $result[$customerId] = $this->parseCustomer($customer);
         }
 
-        $this->count = count($result);
-        $this->data =  $result;
+        $this->_count = count($result);
+        $this->_data =  $result;
         return true;
     }
 
-    private function parseCustomer($customer)
+    protected function parseCustomer($customer)
     {
 
         $result['entity_id'] = $customer->getEntityId();
@@ -84,14 +89,16 @@ class SavvyCube_Connector_Model_Api_Customer extends SavvyCube_Connector_Model_A
         return $result;
     }
 
-    private function getGenderText($genderValue) {
+    protected function getGenderText($genderValue)
+    {
         if (!isset($this->genderTex[$genderValue])) {
-            $this->genderText[$genderValue] =
+            $this->_genderText[$genderValue] =
             Mage::getResourceModel('customer/customer')
                 ->getAttribute('gender')
                 ->getSource()
                 ->getOptionText($genderValue);
         }
-        return $this->genderText[$genderValue];
+
+        return $this->_genderText[$genderValue];
     }
 }

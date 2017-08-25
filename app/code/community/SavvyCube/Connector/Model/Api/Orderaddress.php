@@ -14,14 +14,16 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
-class SavvyCube_Connector_Model_Api_Orderaddress extends SavvyCube_Connector_Model_Api_Abstract {
+class SavvyCube_Connector_Model_Api_Orderaddress extends SavvyCube_Connector_Model_Api_Abstract
+{
 
-    protected $mainTable = 'sales_flat_order_address';
+    protected $_mainTable = 'sales_flat_order_address';
 
-    protected $parentEntity = array(
+    protected $_parentEntity = array(
         'table' => 'sales_flat_order',
         'parent_fk' => 'parent_id'
     );
@@ -51,7 +53,7 @@ class SavvyCube_Connector_Model_Api_Orderaddress extends SavvyCube_Connector_Mod
                 'region_id',
                 'suffix',
             ),
-            $this->mainTable,
+            $this->_mainTable,
             'main_table'
         );
     }

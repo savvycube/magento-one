@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,7 +14,8 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Action
@@ -69,15 +69,16 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
         if (!$this->getAuthHelper()->auth($this->getRequest())) {
             $error = array('401 Unauthorized');
         } else {
-            $this->getAuthHelper()->cleanSession();
-            $this->getAuthHelper()->cleanNonce();
+            $this->getAuthHelper()->getResource()->cleanSession();
+            $this->getAuthHelper()->getResource()->cleanNonce();
             $key = $this->getRequest()->getParam('key');
-            $session = $this->getAuthHelper()->createSession($key);
+            $session = $this->getAuthHelper()->getResource()->createSession($key);
             $key = $this->getAuthHelper()->getKeyBySession($session);
             $key = base64_encode($this->getAuthHelper()->getScRsa()->encrypt($key));
             Mage::app()->getResponse()->setHeader('Sc-Session', $session);
             Mage::app()->getResponse()->setHeader('Sc-Key', $key);
         }
+
         if (isset($error)) {
             list ($header, $body) = $error;
             Mage::app()->getResponse()

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,13 +14,14 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_Abstract
 {
 
-    private $categories;
+    protected $_categories;
 
     /**
      * Render response on savvycube/api/probe get query
@@ -60,11 +60,11 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
         $bottomQuoteDate = $this->getHelper()->getDbRead()->fetchOne($bottomQuoteSql);
         $bottomCustomerDate = $this->getHelper()->getDbRead()->fetchOne($bottomCustomerSql);
         $bottomProductDate = $this->getHelper()->getDbRead()->fetchOne($bottomProductSql);
-        $this->queryTime += microtime(true) - $start;
+        $this->_queryTime += microtime(true) - $start;
 
         $utcTimestamp = new DateTime(null, new DateTimeZone('UTC'));
 
-        $this->data =  array(
+        $this->_data =  array(
             'module_version' => $currentVersion,
             'magento_version' => Mage::getVersion(),
             'source_bottom' => min($bottomDate, $bottomQuoteDate, $bottomCustomerDate, $bottomProductDate),
@@ -102,23 +102,26 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
                 ->getIsDefault();
             $storeData['root_category_id'] = $store->getRootCategoryId();
             $storeData['root_category'] = $this->getCategoryName(
-                $store->getRootCategoryId());
-            foreach($configValues as $name => $path) {
+                $store->getRootCategoryId()
+            );
+            foreach($configValues as $name => $path)
                 $storeData[$name] = Mage::getStoreConfig($path, $store);
-            }
+
             $result[$code] = $storeData;
         }
 
-        $this->count = count($result);
+        $this->_count = count($result);
         return $result;
     }
 
-    private function getCategoryName($catId) {
-        if (!isset($this->categories[$catId])) {
-            $this->categories[$catId] =
+    protected function getCategoryName($catId)
+    {
+        if (!isset($this->_categories[$catId])) {
+            $this->_categories[$catId] =
                 Mage::helper('wCube')->getFullCategoryPath($catId);
         }
-        return $this->categories[$catId];
+
+        return $this->_categories[$catId];
     }
 
     public function getStoreLimits()
@@ -127,14 +130,15 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
         $stores = Mage::app()->getStores(true, true);
         foreach ($stores as $code => $store) {
             # category
-            $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')->startEnvironmentEmulation($store->getId());
+            $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')
+                ->startEnvironmentEmulation($store->getId());
             $query = Mage::getModel('catalog/category')
                 ->getCollection()->getSelect()
                 ->reset(Varien_Db_Select::COLUMNS)
                 ->columns(array('max(updated_at) as max', 'min(updated_at) as min'));
             $start = microtime(true);
             $result[$store->getCode()]['category'] = $this->getHelper()->getDbRead()->fetchRow($query);
-            $this->queryTime += microtime(true) - $start;
+            $this->_queryTime += microtime(true) - $start;
             Mage::getSingleton('core/app_emulation')->stopEnvironmentEmulation($initialEnvironmentInfo);
             # product
             $prodCollection = Mage::getModel('catalog/product')
@@ -148,40 +152,52 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
 
             $catSubquery = $db->select()
                 ->from(array('cat_prod' => $categoryProdTable))
-                ->joinLeft(array('cat' => $categoryTable),
-                    'cat.entity_id = cat_prod.category_id')
+                ->joinLeft(
+                    array('cat' => $categoryTable),
+                    'cat.entity_id = cat_prod.category_id'
+                )
                 ->reset(Varien_Db_Select::COLUMNS)
-                ->columns(array(
+                ->columns(
+                    array(
                         'cat_updated_at' => 'max(cat.updated_at)',
                         'product_id' => 'cat_prod.product_id'
-                    ))
+                    )
+                )
                 ->group('cat_prod.product_id');
 
 
             $prodCollection->getSelect()
-                ->joinLeft(array('cat_sum' => $catSubquery),
+                ->joinLeft(
+                    array('cat_sum' => $catSubquery),
                     'cat_sum.product_id = e.entity_id',
-                    array());
+                    array()
+                );
 
 
 
             if ($store->getWebsiteId() != 0) {
                 $website = $store->getWebsiteId();
-                $prodCollection->joinTable(array('website' => 'catalog/product_website'),
+                $prodCollection->joinTable(
+                    array('website' => 'catalog/product_website'),
                     'product_id=entity_id',
                     array('website_id'),
-                    "website_id = {$website}");
+                    "website_id = {$website}"
+                );
             }
+
             $query = $prodCollection->getSelect()
                 ->reset(Varien_Db_Select::COLUMNS)
-                ->columns(array(
+                ->columns(
+                    array(
                     'max(greatest(updated_at, cat_updated_at)) as max',
-                    'min(least(updated_at, cat_updated_at)) as min'));
+                    'min(least(updated_at, cat_updated_at)) as min')
+                );
 
             $start = microtime(true);
             $result[$store->getCode()]['product'] = $this->getHelper()->getDbRead()->fetchRow($query);
-            $this->queryTime += microtime(true) - $start;
+            $this->_queryTime += microtime(true) - $start;
         }
+
         return $result;
     }
 
@@ -223,7 +239,7 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
             ->columns(array("max({$column}) as max", "min({$column}) as min"));
         $start = microtime(true);
         $result = $this->getHelper()->getDbRead()->fetchRow($query);
-        $this->queryTime += microtime(true) - $start;
+        $this->_queryTime += microtime(true) - $start;
         return $result;
     }
 
@@ -235,13 +251,13 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
             ->columns(array("max({$column}) as max", "min({$column}) as min"));
         $start = microtime(true);
         $result = $this->getHelper()->getDbRead()->fetchRow($query);
-        $this->queryTime += microtime(true) - $start;
+        $this->_queryTime += microtime(true) - $start;
         return $result;
     }
 
     public function init($params)
     {
-        $this->request = array();
+        $this->_request = array();
         return $this;
     }
 

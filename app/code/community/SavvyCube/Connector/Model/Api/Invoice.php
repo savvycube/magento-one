@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Magento
  *
@@ -15,12 +14,13 @@
  *
  * @category   SavvyCube
  * @package    SavvyCube_Connector
- * @copyright  Copyright (c) 2014 SavvyCube (http://www.savvycube.com). SavvyCube is a trademark of Webtex Solutions, LLC (http://www.webtexsoftware.com).
+ * @copyright  Copyright (c) 2017 SavvyCube
+ * SavvyCube is a trademark of Webtex Solutions, LLC
  * @license    http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
  */
 class SavvyCube_Connector_Model_Api_Invoice extends SavvyCube_Connector_Model_Api_Abstract
 {
-    protected $mainTable = 'sales_flat_invoice';
+    protected $_mainTable = 'sales_flat_invoice';
 
     /**
      * Return columns list for getMethod select
@@ -55,7 +55,7 @@ class SavvyCube_Connector_Model_Api_Invoice extends SavvyCube_Connector_Model_Ap
                 'created_at',
                 'updated_at',
             ),
-            $this->mainTable,
+            $this->_mainTable,
             'main_table',
             array(
                 'base_discount_amount' => 'discount_amount',
@@ -68,7 +68,6 @@ class SavvyCube_Connector_Model_Api_Invoice extends SavvyCube_Connector_Model_Ap
                 'base_subtotal' => 'subtotal',
                 'base_grand_total' => 'grand_total',
             )
-
         );
     }
 }
