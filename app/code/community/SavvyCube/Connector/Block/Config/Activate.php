@@ -30,8 +30,8 @@ extends Mage_Adminhtml_Block_System_Config_Form_Field
         $html = $this->getLayout()->createBlock('adminhtml/widget_button')
                     ->setType('button')
                     ->setClass('scalable')
-                    ->setLabel('Activate')
-                    ->setOnClick("setLocation('".$this->getUrl('adminhtml/Savvycube/index')."')")
+                    ->setLabel('Connect')
+                    ->setOnClick("setLocation('".$this->getUrl('adminhtml/savvycube/index')."')")
                     ->toHtml();
 
         return $html;

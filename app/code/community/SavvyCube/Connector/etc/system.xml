@@ -32,16 +32,17 @@
                     <label>General Settings</label>
                     <sort_order>0</sort_order>
                     <show_in_default>1</show_in_default>
+                    <expanded>1</expanded>
                     <fields>
                         <version>
-                            <label>Connector version:</label>
+                            <label>SavvyCube Connector version:</label>
                             <sort_order>0</sort_order>
                             <show_in_default>1</show_in_default>
                             <frontend_model>wCube/config_version</frontend_model>
                             <frontend_type>label</frontend_type>
                         </version>
                         <activation>
-                            <label>Connect/reconnect:</label>
+                            <label>Connect or reconnect the store:</label>
                             <sort_order>0</sort_order>
                             <show_in_default>1</show_in_default>
                             <frontend_model>wCube/config_activate</frontend_model>
@@ -51,10 +52,10 @@
                             <label>SavvyCube URL:</label>
                             <sort_order>0</sort_order>
                             <show_in_default>1</show_in_default>
-                            <frontend_type>label</frontend_type>
+                            <frontend_type>link</frontend_type>
                         </savvy_url>
                         <base_url>
-                            <label>External URL (should be accesable for SavvyCube):</label>
+                            <label>Store URL (must be visible online):</label>
                             <frontend_type>text</frontend_type>
                             <sort_order>0</sort_order>
                             <show_in_default>1</show_in_default>

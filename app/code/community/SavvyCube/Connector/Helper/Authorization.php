@@ -32,7 +32,7 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
     {
         $baseUrl = Mage::getStoreConfig('w_cube/settings/base_url', 0);
         $adminUrl = Mage::helper("adminhtml")
-            ->getUrl("adminhtml/Savvycube/activate");
+            ->getUrl("adminhtml/savvycube/activate");
         return Mage::getStoreConfig('w_cube/settings/savvy_url')
         . "account/connect-login?"
         . "&type=m1"
