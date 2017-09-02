@@ -142,7 +142,7 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
             Mage::getSingleton('core/app_emulation')->stopEnvironmentEmulation($initialEnvironmentInfo);
             # product
             $prodCollection = Mage::getModel('catalog/product')
-                ->getCollection()->setStoreId($storeId);
+                ->getCollection()->setStoreId($store->getId());
             $db = Mage::getModel('core/resource')->getConnection('core_read');
 
             $categoryTable = Mage::getSingleton('core/resource')

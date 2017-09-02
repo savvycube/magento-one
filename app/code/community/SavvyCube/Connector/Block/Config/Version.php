@@ -21,7 +21,7 @@
 class SavvyCube_Connector_Block_Config_Version
     extends Mage_Adminhtml_Block_System_Config_Form_Field
 {
-    protected function _getElementHtml($element)
+    protected function _getElementHtml(Varien_Data_Form_Element_Abstract $element)
     {
         /** @var SavvyCube_Connector_Helper_Data $helper */
         $helper = Mage::helper('wCube');

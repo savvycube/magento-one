@@ -205,7 +205,7 @@ class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Ap
                     $prefix = 'Unknown';
                 }
 
-                if ($result[0] == $prefix) {
+                if (!empty($result) && $result[0] == $prefix) {
                     array_shift($result);
                 } else {
                     break;
