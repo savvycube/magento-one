@@ -25,6 +25,7 @@ class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Ap
 
     public function getMethod()
     {
+        Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
         $result = array();
         $count = (int)$this->_request['count'];
         $offset = (int)$this->_request['offset'];

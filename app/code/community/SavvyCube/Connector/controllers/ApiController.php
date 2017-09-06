@@ -30,7 +30,7 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
     public function indexAction()
     {
         if (!$this->getAuthHelper()->auth($this->getRequest())) {
-            $error = array('401 Unauthorized');
+            $error = array('401 Unauthorized', '');
         } else {
             $session = $this->getRequest()->getHeader('Sc-Session');
             $key = $this->getAuthHelper()->getKeyBySession($session);
@@ -67,7 +67,8 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
     public function authAction()
     {
         if (!$this->getAuthHelper()->auth($this->getRequest())) {
-            $error = array('401 Unauthorized');
+            Mage::app()->getResponse()
+                ->setHeader('HTTP/1.1', '401 Unauthorized');
         } else {
             $this->getAuthHelper()->getResource()->cleanSession();
             $this->getAuthHelper()->getResource()->cleanNonce();
@@ -79,12 +80,6 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
             Mage::app()->getResponse()->setHeader('Sc-Key', $key);
         }
 
-        if (isset($error)) {
-            list ($header, $body) = $error;
-            Mage::app()->getResponse()
-                ->setHeader('HTTP/1.1', $header)
-                ->setBody($body);
-        }
     }
 
     public function checkAction()
