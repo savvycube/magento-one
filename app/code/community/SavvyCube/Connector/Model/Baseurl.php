@@ -26,7 +26,8 @@ class SavvyCube_Connector_Model_Baseurl extends Mage_Core_Model_Config_Data
      */
     protected function _afterLoad()
     {
-        if (empty($this->getValue())) {
+        $currentValue = $this->getValue();
+        if (empty($currentValue)) {
             $baseUrl = Mage::app()->getDefaultStoreView()->getBaseUrl();
             $this->setValue($baseUrl);
             Mage::getConfig()->saveConfig(

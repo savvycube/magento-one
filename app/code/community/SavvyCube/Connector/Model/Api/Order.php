@@ -60,13 +60,13 @@ class SavvyCube_Connector_Model_Api_Order extends SavvyCube_Connector_Model_Api_
         return array_merge(
             $this->prepareColumns(
                 array('method'),
-                $this->getHelper()->getTableName('sales/order_payment'),
+                'sales/order_payment',
                 'payment',
                 array('method' => 'payment_method')
             ),
             $this->prepareColumns(
                 array('label'),
-                $this->getHelper()->getTableName('sales/order_status'),
+                'sales/order_status',
                 'st_label',
                 array('label' => 'status_label')
             ),

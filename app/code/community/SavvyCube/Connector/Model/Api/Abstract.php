@@ -47,7 +47,7 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
             $this->_data = $this->getResult(
                 $this->generateQuery()
                     ->joinLeft(
-                        array('parent_table' => $this->_parentEntity['table']),
+                        array('parent_table' => $this->getHelper()->getTableName($this->_parentEntity['table'])),
                         "parent_table.entity_id = main_table.{$this->_parentEntity['parent_fk']}"
                     )
                     ->reset(Varien_Db_Select::COLUMNS)
@@ -180,7 +180,7 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
     {
         $result = array();
         $columns = array_flip($columns);
-        if ($this->getHelper()->getDbRead()->isTableExists($table)) {
+        if ($this->getHelper()->getDbRead()->isTableExists($this->getHelper()->getTableName($table))) {
             $tableDescription = $this->getHelper()->getDbRead()->describeTable(
                 $this->getHelper()->getTableName($table)
             );
