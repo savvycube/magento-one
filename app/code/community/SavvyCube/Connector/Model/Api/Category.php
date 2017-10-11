@@ -52,6 +52,8 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
                 );
         }
 
+        $categoryCollection->getSelect()->limit($count, $offset);
+
         $start = microtime(true);
         $categories = $categoryCollection->getItems();
         $this->_queryTime += microtime(true) - $start;
