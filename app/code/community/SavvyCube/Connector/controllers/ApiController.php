@@ -69,6 +69,7 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
         if (!$this->getAuthHelper()->auth($this->getRequest())) {
             Mage::app()->getResponse()
                 ->setHeader('HTTP/1.1', '401 Unauthorized');
+            Mage::app()->getResponse()->setBody('401');
         } else {
             $this->getAuthHelper()->getResource()->cleanSession();
             $this->getAuthHelper()->getResource()->cleanNonce();
@@ -78,6 +79,7 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
             $key = base64_encode($this->getAuthHelper()->getScRsa()->encrypt($key));
             Mage::app()->getResponse()->setHeader('Sc-Session', $session);
             Mage::app()->getResponse()->setHeader('Sc-Key', $key);
+            Mage::app()->getResponse()->setBody('ok');
         }
 
     }
@@ -90,9 +92,11 @@ class SavvyCube_Connector_ApiController extends Mage_Core_Controller_Front_Actio
             list($iv, $signature) = $result;
             Mage::app()->getResponse()->setHeader('Sc-Sig', $signature);
             Mage::app()->getResponse()->setHeader('Sc-Iv', $iv);
+            Mage::app()->getResponse()->setBody('ok');
         } else {
             Mage::app()->getResponse()
                 ->setHeader('HTTP/1.1', '401 Unauthorized');
+            Mage::app()->getResponse()->setBody('401');
         }
     }
 

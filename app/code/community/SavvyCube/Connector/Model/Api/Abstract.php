@@ -46,7 +46,7 @@ abstract class SavvyCube_Connector_Model_Api_Abstract
         if (!empty($this->_parentEntity)) {
             $this->_data = $this->getResult(
                 $this->generateQuery()
-                    ->joinLeft(
+                    ->join(
                         array('parent_table' => $this->getHelper()->getTableName($this->_parentEntity['table'])),
                         "parent_table.entity_id = main_table.{$this->_parentEntity['parent_fk']}"
                     )

@@ -26,6 +26,8 @@ class SavvyCube_Connector_Helper_Data extends Mage_Core_Helper_Abstract
 
     protected $_tableName;
 
+    protected $_categories;
+
     /**
      * return module log name
      *
@@ -107,6 +109,46 @@ class SavvyCube_Connector_Helper_Data extends Mage_Core_Helper_Abstract
         }
 
         return $this->_tableName[$name];
+    }
+
+    public function getRelativeCategoryPath($catId, $store)
+    {
+        $result = array();
+        if (!isset($this->_categories)) {
+            $collection = Mage::getModel('catalog/category')->getCollection()
+                ->addAttributeToSelect('name');
+            $this->_categories = $collection->getItems();
+        }
+
+        $categories = $this->_categories;
+        if (isset($categories[$catId])) {
+            foreach ($categories[$catId]->getPathIds() as $id) {
+                if (isset($categories[$id])) {
+                    $result[] = $categories[$id]->getName();
+                } else {
+                    $result[] = 'Unknown';
+                }
+            }
+        }
+
+        if (isset($categories[$store->getRootCategoryId()])) {
+            $rootCategory = $categories[$store->getRootCategoryId()];
+            foreach ($rootCategory->getPathIds() as $id) {
+                if (isset($categories[$id])) {
+                    $prefix = $categories[$id]->getName();
+                } else {
+                    $prefix = 'Unknown';
+                }
+
+                if (!empty($result) && $result[0] == $prefix) {
+                    array_shift($result);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        return implode('/', $result);
     }
 
     public function getFullCategoryPath($categoryId)

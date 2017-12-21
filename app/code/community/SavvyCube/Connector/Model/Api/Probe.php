@@ -38,21 +38,29 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
         $bottomOrderSql = $this->getHelper()->getDbRead()->select()
             ->from(array('ent' => $this->getHelper()->getTableName('sales_flat_order')))
             ->reset(Varien_Db_Select::COLUMNS)
+            ->where('created_at > 0')
+            ->where('created_at IS NOT NULL')
             ->columns('MIN(created_at) AS bottom_date');
 
         $bottomQuoteSql = $this->getHelper()->getDbRead()->select()
             ->from(array('ent' => $this->getHelper()->getTableName('sales_flat_quote')))
             ->reset(Varien_Db_Select::COLUMNS)
+            ->where('created_at > 0')
+            ->where('created_at IS NOT NULL')
             ->columns('MIN(created_at) AS bottom_date');
 
         $bottomCustomerSql = $this->getHelper()->getDbRead()->select()
             ->from(array('ent' => $this->getHelper()->getTableName('customer_entity')))
             ->reset(Varien_Db_Select::COLUMNS)
+            ->where('created_at > 0')
+            ->where('created_at IS NOT NULL')
             ->columns('MIN(created_at) AS bottom_date');
 
         $bottomProductSql = $this->getHelper()->getDbRead()->select()
             ->from(array('ent' => $this->getHelper()->getTableName('catalog_product_entity')))
             ->reset(Varien_Db_Select::COLUMNS)
+            ->where('created_at > 0')
+            ->where('created_at IS NOT NULL')
             ->columns('MIN(created_at) AS bottom_date');
 
         $start = microtime(true);
@@ -60,15 +68,21 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
         $bottomQuoteDate = $this->getHelper()->getDbRead()->fetchOne($bottomQuoteSql);
         $bottomCustomerDate = $this->getHelper()->getDbRead()->fetchOne($bottomCustomerSql);
         $bottomProductDate = $this->getHelper()->getDbRead()->fetchOne($bottomProductSql);
+        $utcTimestamp = $this->getHelper()->getDbRead()->fetchOne('SELECT UTC_TIMESTAMP()');
+        $sourceBottom = min(array_filter(array(
+            $bottomDate,
+            $bottomQuoteDate,
+            $bottomCustomerDate,
+            $bottomProductDate,
+            $utcTimestamp
+        )));
         $this->_queryTime += microtime(true) - $start;
-
-        $utcTimestamp = new DateTime(null, new DateTimeZone('UTC'));
 
         $this->_data =  array(
             'module_version' => $currentVersion,
             'magento_version' => Mage::getVersion(),
-            'source_bottom' => min($bottomDate, $bottomQuoteDate, $bottomCustomerDate, $bottomProductDate),
-            'utc_timestamp' => $utcTimestamp->format("Y-m-d H:i:s"),
+            'source_bottom' => $sourceBottom,
+            'utc_timestamp' => $utcTimestamp,
             'timezone' => $currentTimezone,
             'stores' => $this->getStores(),
             'store_limits' => $this->getStoreLimits(),
@@ -132,17 +146,22 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
             # category
             $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')
                 ->startEnvironmentEmulation($store->getId());
-            $query = Mage::getModel('catalog/category')
-                ->getCollection()->getSelect()
+            $treeRoot = Mage_Catalog_Model_Category::TREE_ROOT_ID;
+            $storeRoot = $store->getRootCategoryId();
+            $query = Mage::getModel('catalog/category')->getCollection()
+                ->addAttributeToFilter('path',
+                    array('like' => "$treeRoot/{$storeRoot}%")
+                )
+                ->getSelect()
                 ->reset(Varien_Db_Select::COLUMNS)
+                ->where('updated_at > 0')
+                ->where('updated_at IS NOT NULL')
                 ->columns(array('max(updated_at) as max', 'min(updated_at) as min'));
             $start = microtime(true);
-            $result[$store->getCode()]['category'] = $this->getHelper()->getDbRead()->fetchRow($query);
+            $result[$store->getCode()]['category'] =
+                $this->getHelper()->getDbRead()->fetchRow($query);
             $this->_queryTime += microtime(true) - $start;
-            Mage::getSingleton('core/app_emulation')->stopEnvironmentEmulation($initialEnvironmentInfo);
             # product
-            $prodCollection = Mage::getModel('catalog/product')
-                ->getCollection()->setStoreId($store->getId());
             $db = Mage::getModel('core/resource')->getConnection('core_read');
 
             $categoryTable = Mage::getSingleton('core/resource')
@@ -157,47 +176,47 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
                     'cat.entity_id = cat_prod.category_id'
                 )
                 ->reset(Varien_Db_Select::COLUMNS)
+                ->where('cat.updated_at > 0')
+                ->where('cat.updated_at IS NOT NULL')
                 ->columns(
                     array(
-                        'cat_updated_at' => 'max(cat.updated_at)',
+                        'updated_at' => 'max(cat.updated_at)',
                         'product_id' => 'cat_prod.product_id'
                     )
                 )
+                ->where('path like ?', "${treeRoot}/${storeRoot}%")
                 ->group('cat_prod.product_id');
 
-
-            $prodCollection->getSelect()
+            $collection = Mage::getModel('catalog/product')
+                ->getCollection();
+            if ($store->getWebsiteId() != 0) {
+                $collection->addWebsiteFilter();
+            }
+            $query = $collection
+                ->getSelect()
+                ->where('e.updated_at > 0')
+                ->where('e.updated_at IS NOT NULL')
                 ->joinLeft(
                     array('cat_sum' => $catSubquery),
                     'cat_sum.product_id = e.entity_id',
-                    array()
-                );
-
-
-
-            if ($store->getWebsiteId() != 0) {
-                $website = $store->getWebsiteId();
-                $prodCollection->joinTable(
-                    array('website' => 'catalog/product_website'),
-                    'product_id=entity_id',
-                    array('website_id'),
-                    "website_id = {$website}"
-                );
-            }
-
-            $query = $prodCollection->getSelect()
-                ->reset(Varien_Db_Select::COLUMNS)
-                ->columns(
                     array(
-                    'max(greatest(updated_at, cat_updated_at)) as max',
-                    'min(least(updated_at, cat_updated_at)) as min')
-                );
+                        'max_cat_updated_at' => 'cat_sum.updated_at',
+                    )
+                )
+                ->reset(Varien_Db_Select::COLUMNS)
+                ->columns(array(
+                    'max(GREATEST(COALESCE(cat_sum.updated_at, 0), e.updated_at)) as max',
+                    'min(LEAST(COALESCE(cat_sum.updated_at, e.updated_at), e.updated_at)) as min'
+                ));
 
             $start = microtime(true);
-            $result[$store->getCode()]['product'] = $this->getHelper()->getDbRead()->fetchRow($query);
+            $result[$store->getCode()]['product']
+                = $this->getHelper()->getDbRead()->fetchRow($query);
             $this->_queryTime += microtime(true) - $start;
         }
 
+        Mage::getSingleton('core/app_emulation')
+            ->stopEnvironmentEmulation($initialEnvironmentInfo);
         return $result;
     }
 
@@ -225,21 +244,35 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
 
     public function getQuoteLimit()
     {
-        $table = 'sales_flat_quote';
-        $column = 'main_table.updated_at';
-        $subQuery = $this->getHelper()->getDbRead()->select()
-            ->distinct()
-            ->from($this->getHelper()->getTableName('sales_flat_quote_item'))
-            ->reset(Varien_Db_Select::COLUMNS)
-            ->columns('quote_id');
-        $query = $this->getHelper()->getDbRead()->select()
-            ->from(array('main_table' => $this->getHelper()->getTableName($table)))
-            ->join(array('items' => $subQuery), 'main_table.entity_id = items.quote_id')
-            ->reset(Varien_Db_Select::COLUMNS)
-            ->columns(array("max({$column}) as max", "min({$column}) as min"));
-        $start = microtime(true);
-        $result = $this->getHelper()->getDbRead()->fetchRow($query);
-        $this->_queryTime += microtime(true) - $start;
+        $result = array('max' => null, 'min' => null);
+        foreach (array('quote', 'quote_item', 'quote_address') as $table) {
+            $start = microtime(true);
+            $tableResult = $this->getHelper()->getDbRead()->fetchRow(
+                $this->getHelper()->getDbRead()->select()
+                ->from($this->getHelper()->getTableName("sales_flat_{$table}"))
+                ->reset(Varien_Db_Select::COLUMNS)
+                ->where('updated_at > 0')
+                ->where('updated_at is not Null')
+                ->columns(array(
+                    'max(updated_at) as max',
+                    'min(updated_at) as min',
+                ))
+            );
+            $this->_queryTime += microtime(true) - $start;
+
+            if ($tableResult['max']
+                && (is_null($result['max'])
+                    || $tableResult['max'] > $result['max'])) {
+                $result['max'] = $tableResult['max'];
+            }
+
+            if ($tableResult['min']
+                && (is_null($result['min'])
+                    || $tableResult['min'] < $result['min'])) {
+                $result['min'] = $tableResult['min'];
+            }
+
+        }
         return $result;
     }
 
@@ -248,6 +281,8 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
         $query = $this->getHelper()->getDbRead()->select()
             ->from($this->getHelper()->getTableName($table))
             ->reset(Varien_Db_Select::COLUMNS)
+            ->where("${column} > 0")
+            ->where("${column} IS NOT NULL")
             ->columns(array("max({$column}) as max", "min({$column}) as min"));
         $start = microtime(true);
         $result = $this->getHelper()->getDbRead()->fetchRow($query);
@@ -260,6 +295,5 @@ class SavvyCube_Connector_Model_Api_Probe extends SavvyCube_Connector_Model_Api_
         $this->_request = array();
         return $this;
     }
-
 
 }

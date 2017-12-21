@@ -21,23 +21,29 @@
 class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_Api_Abstract
 {
 
-    protected $_categories;
 
     public function getMethod()
     {
-        $result = array();
         $count = (int)$this->_request['count'];
         $offset = (int)$this->_request['offset'];
         $storeId = (int)$this->_request['store'];
         $store = Mage::app()->getStore($storeId);
-        $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')->startEnvironmentEmulation($store->getId());
-
-        $categoryCollection = Mage::getModel('catalog/category')
-            ->getCollection()
+        $data = array();
+        $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')
+            ->startEnvironmentEmulation($store->getId());
+        $treeRoot = Mage_Catalog_Model_Category::TREE_ROOT_ID;
+        $storeRoot = $store->getRootCategoryId();
+        $collection = Mage::getModel('catalog/category')->getCollection()
+            ->addAttributeToSelect('entity_id')
             ->addAttributeToSelect('created_at')
-            ->addAttributeToSelect('updated_at');
+            ->addAttributeToSelect('updated_at')
+            ->addAttributeToFilter('path',
+                array('like' => "$treeRoot/{$storeRoot}%")
+            )
+            ->setOrder('entity_id', 'ASC');
+        $collection->getSelect()->limit($count, $offset);
         if (isset($this->_request['from'])) {
-            $categoryCollection->getSelect()
+            $collection->getSelect()
                 ->where(
                     "updated_at >= ?",
                     $this->_request['from']
@@ -45,91 +51,33 @@ class SavvyCube_Connector_Model_Api_Category extends SavvyCube_Connector_Model_A
         }
 
         if (isset($this->_request['to'])) {
-            $categoryCollection->getSelect()
+            $collection->getSelect()
                 ->where(
                     "updated_at <= ?",
                     $this->_request['to']
                 );
         }
-
-        $categoryCollection->getSelect()->limit($count, $offset);
-
         $start = microtime(true);
-        $categories = $categoryCollection->getItems();
+        $collection->getItems();
         $this->_queryTime += microtime(true) - $start;
 
-        foreach ($categories as $id => $category) {
-            $result[$id] = $this->processCategory(
-                $category,
-                $store
+        foreach($collection as $id => $category) {
+            $data[$id] = array(
+                'entity_id' => $category->getId(),
+                'store_id' => $store->getId(),
+                'name' => $this->getHelper()
+                    ->getRelativeCategoryPath($category->getId(), $store),
+                'full_name' => $this->getHelper()
+                    ->getFullCategoryPath($category->getId()),
+                'root' => $store->getRootCategoryId(),
+                'created_at' => $category->getCreatedAt(),
+                'updated_at' => $category->getUpdatedAt()
             );
         }
-
+        $this->_count = count($data);
+        $this->_data = $data;
         Mage::getSingleton('core/app_emulation')->stopEnvironmentEmulation($initialEnvironmentInfo);
-
-        $this->_count = count($result);
-        $this->_data = $result;
         return true;
-    }
-
-    protected function processCategory($category, $store)
-    {
-        $result['entity_id'] = $category->getEntityId();
-        $result['store_id'] = $store->getId();
-        $result['name'] = $this->getFullCategoryPath($category->getId(), $store);
-        $result['created_at'] = $category->getCreatedAt();
-        $result['updated_at'] = $category->getUpdatedAt();
-        return $result;
-    }
-
-    protected function getFullCategoryPath($catId, $store)
-    {
-        $result = array();
-        if (!isset($this->_categories[$store->getId()])) {
-             $collection = Mage::getModel('catalog/category')->getCollection()
-                ->setStoreId($store->getId())
-                ->addAttributeToSelect('name');
-             $orFilter = array();
-             if ($store->getRootCategoryId() != 0) {
-                 $rootCategory = $store->getRootCategoryId();
-                 $orFilter[] = array('attribute' => 'path', 'like' => "1/{$rootCategory}");
-                 $orFilter[] = array('attribute' => 'path', 'like' => "1/{$rootCategory}/%");
-                 $orFilter[] = array('attribute' => 'parent_id', 'eq' => 0);
-                 $collection->addAttributeToFilter($orFilter);
-             }
-
-             $this->_categories[$store->getId()] = $collection->getItems();
-        }
-
-        $categories = $this->_categories[$store->getId()];
-        if (isset($categories[$catId])) {
-            foreach ($categories[$catId]->getPathIds() as $id) {
-                if (isset($categories[$id])) {
-                    $result[] = $categories[$id]->getName();
-                } else {
-                    $result[] = 'Unknown';
-                }
-            }
-        }
-
-        if (isset($categories[$store->getRootCategoryId()])) {
-            $rootCategory = $categories[$store->getRootCategoryId()];
-            foreach ($rootCategory->getPathIds() as $id) {
-                if (isset($categories[$id])) {
-                    $prefix = $categories[$id]->getName();
-                } else {
-                    $prefix = 'Unknown';
-                }
-
-                if (!empty($result) && $result[0] == $prefix) {
-                    array_shift($result);
-                } else {
-                    break;
-                }
-            }
-        }
-
-        return implode('/', $result);
     }
 
     public function init($params)

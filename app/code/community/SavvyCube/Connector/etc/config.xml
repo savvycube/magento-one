@@ -23,7 +23,7 @@
 <config>
     <modules>
         <SavvyCube_Connector>
-            <version>2.0.5</version>
+            <version>2.0.6</version>
         </SavvyCube_Connector>
     </modules>
     <global>
@@ -96,7 +96,7 @@
         <w_cube>
             <settings>
                  <priv backend_model="adminhtml/system_config_backend_encrypted" />
-                 <savvy_url><![CDATA[https://appbeta.savvycube.com/]]></savvy_url>
+                 <savvy_url><![CDATA[https://app.savvycube.com/]]></savvy_url>
             </settings>
         </w_cube>
     </default>

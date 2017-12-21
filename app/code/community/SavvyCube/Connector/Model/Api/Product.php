@@ -21,36 +21,21 @@
 class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Api_Abstract
 {
 
-    protected $_categories;
-
     public function getMethod()
     {
-        Mage::app()->setCurrentStore(Mage_Core_Model_App::ADMIN_STORE_ID);
-        $result = array();
         $count = (int)$this->_request['count'];
         $offset = (int)$this->_request['offset'];
         $storeId = (int)$this->_request['store'];
         $store = Mage::app()->getStore($storeId);
+        $initialEnvironmentInfo = Mage::getSingleton('core/app_emulation')
+            ->startEnvironmentEmulation($store->getId());
 
-        $productCollection = Mage::getModel('catalog/product')
-            ->getCollection()->setStoreId($storeId);
-        $productCollection->removeAttributeToSelect()
-            ->addAttributeToSelect('entity_id')
-            ->addAttributeToSelect('sku')
-            ->addAttributeToSelect('type_id')
-            ->addAttributeToSelect('name')
-            ->addAttributeToSelect('status')
-            ->addAttributeToSelect('url')
-            ->addAttributeToSelect('msrp')
-            ->addAttributeToSelect('visibility')
-            ->addAttributeToSelect('url_key')
-            ->joinField(
-                'attribute_set_name',
-                Mage::getModel('eav/entity_attribute_set')
-                    ->getResource()->getMainTable(),
-                'attribute_set_name',
-                'attribute_set_id=attribute_set_id'
-            );
+        $collection = Mage::getModel('catalog/product')
+            ->getCollection();
+
+        if ($store->getWebsiteId() != 0) {
+            $collection->addWebsiteFilter();
+        }
 
         $db = Mage::getModel('core/resource')->getConnection('core_read');
 
@@ -59,6 +44,8 @@ class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Ap
         $categoryProdTable = Mage::getSingleton('core/resource')
             ->getTableName('catalog/category_product');
 
+        $treeRoot = Mage_Catalog_Model_Category::TREE_ROOT_ID;
+        $storeRoot = $store->getRootCategoryId();
         $catSubquery = $db->select()
             ->from(array('cat_prod' => $categoryProdTable))
             ->joinLeft(
@@ -74,10 +61,29 @@ class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Ap
                     'product_id' => 'cat_prod.product_id'
                 )
             )
+            ->where('path like ?', "${treeRoot}/${storeRoot}%")
             ->group('cat_prod.product_id');
 
+        $collection
+            ->addAttributeToSelect('entity_id')
+            ->addAttributeToSelect('sku')
+            ->addAttributeToSelect('type_id')
+            ->addAttributeToSelect('name')
+            ->addAttributeToSelect('status')
+            ->addAttributeToSelect('url')
+            ->addAttributeToSelect('msrp')
+            ->addAttributeToSelect('visibility')
+            ->addAttributeToSelect('url_key')
+            ->joinField(
+                'attribute_set_name',
+                Mage::getModel('eav/entity_attribute_set')
+                    ->getResource()->getMainTable(),
+                'attribute_set_name',
+                'attribute_set_id=attribute_set_id'
+            )->setOrder('entity_id', 'ASC');
 
-        $productCollection->getSelect()
+        $collection->getSelect()->limit($count, $offset);
+        $collection->getSelect()
             ->joinLeft(
                 array('cat_sum' => $catSubquery),
                 'cat_sum.product_id = e.entity_id',
@@ -87,134 +93,63 @@ class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Ap
                     'categories' => 'cat_sum.categories'
                 )
             );
-
-
-
-        if ($store->getWebsiteId() != 0) {
-            $website = $store->getWebsiteId();
-            $productCollection
-            ->joinTable(
-                array('website' => 'catalog/product_website'),
-                'product_id=entity_id',
-                array('website_id'),
-                "website_id = {$website}"
-            );
-        }
-
-        $productCollection->getSelect()->limit($count, $offset);
-
-        $prodDate = 'e.updated_at';
-        $catDate = 'cat_sum.updated_at';
+        $collection->getSelect()->columns(array(
+            'greatest_created' => 'GREATEST(COALESCE(cat_sum.created_at, 0), e.created_at)',
+            'greatest_updated' => 'GREATEST(COALESCE(cat_sum.updated_at, 0), e.updated_at)'));
 
         if (isset($this->_request['from'])) {
-            $productCollection->getSelect()
+            $collection->getSelect()
                 ->where(
-                    "{$prodDate} >= ? OR {$catDate} >= ?",
-                    $this->_request['from']
-                );
+                    "GREATEST(COALESCE(cat_sum.updated_at, 0), e.updated_at) >= ?",
+                    $this->_request['from']);
         }
 
         if (isset($this->_request['to'])) {
-            $productCollection->getSelect()
+            $collection->getSelect()
                 ->where(
-                    "{$prodDate} <= ? OR {$catDate} <= ?",
-                    $this->_request['to']
-                );
+                    "GREATEST(COALESCE(cat_sum.updated_at, 0), e.updated_at) <= ?",
+                    $this->_request['to']);
         }
 
         $start = microtime(true);
-        $products = $productCollection->getItems();
+        $products = $collection->getItems();
         $this->_queryTime += microtime(true) - $start;
 
+        $data = array();
+
         foreach ($products as $id => $product) {
-            $result[$id] = $this->processProduct(
-                $product,
-                $store
+            $result = array(
+                'entity_id' => $product->getEntityId(),
+                'store_id' => $store->getId(),
+                'attribute_set' => $product->getAttributeSetName(),
+                'type_id' => $product->getTypeId(),
+                'sku' => $product->getSku(),
+                'name' => $product->getName(),
+                'status' => $product->getAttributeText('status'),
+                'visibility' => $product->getAttributeText('visibility'),
+                'url_key' => $product->getUrlKey(),
+                'msrp' => $product->getMsrp(),
+                'created_at' => $product->getGreatestCreated(),
+                'updated_at' => $product->getGreatestUpdated(),
+
             );
+            if ($product->getCategories()) {
+                foreach(explode(',', $product->getCategories()) as $category)
+                    $result['categories'][$category] = $this->getHelper()
+                        ->getRelativeCategoryPath(
+                            $category,
+                            $store
+                        );
+            } else {
+                $result['categories'] = array();
+            }
+            $data[$id] = $result;
         }
 
-        $this->_count = count($result);
-        $this->_data = $result;
+        $this->_count = count($data);
+        $this->_data = $data;
+        Mage::getSingleton('core/app_emulation')->stopEnvironmentEmulation($initialEnvironmentInfo);
         return true;
-    }
-
-    protected function processProduct($product, $store)
-    {
-        $result['entity_id'] = $product->getEntityId();
-        $result['store_id'] = $store->getId();
-        $result['attribute_set'] = $product->getAttributeSetName();
-        $result['type_id'] = $product->getTypeId();
-        $result['sku'] = $product->getSku();
-        $result['name'] = $product->getName();
-        $result['status'] = $product->getAttributeText('status');
-        $result['visibility'] = $product->getAttributeText('visibility');
-        $result['url_key'] = $product->getUrlKey();
-        $result['msrp'] = $product->getMsrp();
-        $result['created_at'] = $product->getCreatedAt();
-        $result['updated_at'] = $product->getUpdatedAt();
-        $result['max_cat_created_at'] = $product->getMaxCatCreatedAt();
-        $result['max_cat_updated_at'] = $product->getMaxCatUpdatedAt();
-        if ($product->getCategories()) {
-            foreach(explode(',', $product->getCategories()) as $category)
-                $result['categories'][$category] = $this->getFullCategoryPath(
-                    $category,
-                    $store
-                );
-        } else {
-            $result['categories'] = array();
-        }
-
-        return $result;
-    }
-
-    protected function getFullCategoryPath($catId, $store)
-    {
-        $result = array();
-        if (!isset($this->_categories[$store->getId()])) {
-             $collection = Mage::getModel('catalog/category')->getCollection()
-                ->setStoreId($store->getId())
-                ->addAttributeToSelect('name');
-             $orFilter = array();
-             if ($store->getRootCategoryId() != 0) {
-                 $rootCategory = $store->getRootCategoryId();
-                 $orFilter[] = array('attribute' => 'path', 'like' => "1/{$rootCategory}");
-                 $orFilter[] = array('attribute' => 'path', 'like' => "1/{$rootCategory}/%");
-                 $orFilter[] = array('attribute' => 'parent_id', 'eq' => 0);
-                 $collection->addAttributeToFilter($orFilter);
-             }
-
-             $this->_categories[$store->getId()] = $collection->getItems();
-        }
-
-        $categories = $this->_categories[$store->getId()];
-        if (isset($categories[$catId])) {
-            foreach ($categories[$catId]->getPathIds() as $id) {
-                if (isset($categories[$id])) {
-                    $result[] = $categories[$id]->getName();
-                } else {
-                    $result[] = 'Unknown';
-                }
-            }
-        }
-
-        if (isset($categories[$store->getRootCategoryId()])) {
-            $rootCategory = $categories[$store->getRootCategoryId()];
-            foreach ($rootCategory->getPathIds() as $id) {
-                if (isset($categories[$id])) {
-                    $prefix = $categories[$id]->getName();
-                } else {
-                    $prefix = 'Unknown';
-                }
-
-                if (!empty($result) && $result[0] == $prefix) {
-                    array_shift($result);
-                } else {
-                    break;
-                }
-            }
-        }
-
-        return implode('/', $result);
     }
 
     public function init($params)
@@ -223,5 +158,4 @@ class SavvyCube_Connector_Model_Api_Product extends SavvyCube_Connector_Model_Ap
         $this->_request['store'] = array_key_exists('store', $params) ? $params['store'] : 0;
         return $this;
     }
-
 }

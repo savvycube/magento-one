@@ -86,6 +86,7 @@ class SavvyCube_Connector_Model_Api_Customer extends SavvyCube_Connector_Model_A
         $result['customer_group'] = $customer->getCustomerGroup();
         $result['updated_at'] = $customer->getUpdatedAt();
         $result['created_at'] = $customer->getCreatedAt();
+        $result['website_id'] = $customer->getWebsiteId();
         return $result;
     }
 

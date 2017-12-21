@@ -210,7 +210,8 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
     {
         $baseUrl = Mage::getStoreConfig('w_cube/settings/base_url', 0);
         $method = strtoupper($request->getMethod());
-        $url = strtolower(rtrim($baseUrl, '/') . $request->getOriginalPathInfo());
+        $url = rtrim(strtolower(rtrim($baseUrl, '/')
+            . $request->getOriginalPathInfo()), '/');
         $paramsBase = array();
         $params = $request->getParams();
         ksort($params, SORT_STRING);

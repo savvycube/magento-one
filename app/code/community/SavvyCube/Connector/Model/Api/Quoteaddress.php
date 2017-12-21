@@ -26,6 +26,27 @@ class SavvyCube_Connector_Model_Api_Quoteaddress extends SavvyCube_Connector_Mod
     protected $_order = 'main_table.address_id';
 
     /**
+     * Render response
+     *
+     * @return array
+     */
+    public function getMethod()
+    {
+        $dateColumn = 'IF(main_table.updated_at = 0 or main_table.updated_at is NULL, parent_table.updated_at, main_table.updated_at)';
+        $parent = $this->getHelper()->getTableName('sales_flat_quote');
+        $joinCond = "parent_table.entity_id = main_table.quote_id";
+        $this->_data = $this->getResult(
+            $this->generateQuery()
+                ->join(array('parent_table' => $parent),$joinCond)
+                ->reset(Varien_Db_Select::COLUMNS)
+                ->columns($this->columnsListForGet())
+                ->columns(array('updated_at' => $dateColumn)),
+            $dateColumn
+        );
+        return true;
+    }
+
+    /**
      * Return columns list for getMethod select
      *
      * @return string | array
@@ -46,7 +67,6 @@ class SavvyCube_Connector_Model_Api_Quoteaddress extends SavvyCube_Connector_Mod
                 'base_grand_total',
                 'weight',
                 'created_at',
-                'updated_at',
                 'customer_id',
                 'quote_id',
                 'address_id',

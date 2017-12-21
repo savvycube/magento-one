@@ -33,12 +33,14 @@ class SavvyCube_Connector_Model_Api_Order extends SavvyCube_Connector_Model_Api_
             ->joinLeft(
                 array('payment' => $this->getHelper()
                     ->getTableName('sales/order_payment')),
-                "main_table.entity_id = payment.parent_id"
+                "main_table.entity_id = payment.parent_id",
+                array()
             )
             ->joinLeft(
                 array('st_label' => $this->getHelper()
                     ->getTableName('sales/order_status')),
-                "main_table.status = st_label.status"
+                "main_table.status = st_label.status",
+                array()
             );
 
 

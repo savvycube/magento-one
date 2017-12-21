@@ -69,7 +69,7 @@ class SavvyCube_Connector_Model_Api_Transaction extends SavvyCube_Connector_Mode
                 array(
                     'transaction_id',
                     'txn_id',
-                    'parrent_txn_id',
+                    'parent_txn_id',
                     'txn_type',
                     'is_closed',
                     'created_at'
