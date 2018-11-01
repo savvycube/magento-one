@@ -50,7 +50,7 @@ class SavvyCube_Connector_SavvycubeController extends Mage_Adminhtml_Controller_
                 'adminhtml/system_config/edit',
                 array('section' => 'w_cube')
             );
-            Mage::app()->getResponse()->setRedirect($finalUrl);
+            Mage::app()->getResponse()->setRedirect($this->getAuthHelper()->getAppSourcesUrl());
         } else {
             Mage::app()->getResponse()
                 ->setHeader('HTTP/1.1', '401 Unauthorized');

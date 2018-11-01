@@ -42,6 +42,12 @@ class SavvyCube_Connector_Helper_Authorization extends Mage_Core_Helper_Abstract
         . "&pub=" . base64_encode($this->getCandidatePublicKey());
     }
 
+    public function getAppSourcesUrl()
+    {
+        return Mage::getStoreConfig('w_cube/settings/savvy_url')
+        . "sources";
+    }
+
     public function cleanCache()
     {
         Mage::getConfig()->cleanCache();
